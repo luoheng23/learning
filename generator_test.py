@@ -1,15 +1,3 @@
-
-# global variable
-num = 10
-
-def closure_test():
-    # 0...9 generator
-    x = (i for i in range(10))
-
-    def _closure_test():
-        return sum(x) * num
-    return _closure_test
-
 def generator_test1():
     # 0...9 generator
     x = (i for i in range(10))
@@ -29,11 +17,26 @@ def generator_test2():
     L = list(x)
     print("L, x", L)
 
+def generator_test3():
+    x = (i for i in range(10))
+    for i in range(10):
+        x = (j + i for j in x)
+    i = 20
+    L = list(x)
+    print("L, x", L)
 
+def generator_test4():
+    x = (i for i in range(10))
+    for i in range(10):
+        x = (j + i for j in x)
+    def _generator_test4(x):
+        i = 20
+        L = list(x)
+        print("L, x", L)
+    _generator_test4(x)
 
 if __name__ == "__main__":
     generator_test1()
     generator_test2()
-    function = closure_test()
-    num = 20
-    print(function())
+    generator_test3()
+    generator_test4()
