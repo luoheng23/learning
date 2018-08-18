@@ -1,9 +1,12 @@
 
 def for_test():
-    x = [i for i in range(10)]
+    x = list(range(10))
     for index, value in enumerate(x):
+        print("delete:", x)
         print("index:", index, "value:", value)
-        del x[index]
+        if index == 5:
+            x[:] = [10]
+    print("x:", x)
 
 if __name__ == "__main__":
     for_test()
