@@ -9,3 +9,5 @@ elif a == 1:
     print("a == 1")
 else:
     print("Unknown a")
+
+print("hello, world!")
