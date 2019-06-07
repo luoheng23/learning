@@ -1,15 +1,19 @@
 class A:
     work = list("hello")
     kind = list("world")
+    another = 1
 
     def test1(self):
-        print(self.work, self.kind)
+        print(self.work, self.kind, self.another)
         self.work[0], self.kind [0] = "t", "t"
-        print(self.work, self.kind)
+        self.another += 1
+        print(A.work, A.kind, A.another)
     
     def test2(self):
         A.work, A.kind = "hello", " world"
-        print(self.work, self.kind)
+        A.another += 2
+        print(self.__dict__)
+        print(self.work, self.kind, self.another)
         A.test2 = 13
         print(self.test2)
 
