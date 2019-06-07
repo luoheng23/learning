@@ -8,5 +8,13 @@ def for_test():
             x[:] = [10]
     print("x:", x)
 
+def for_test2():
+    x = list(range(10))
+    j = 10
+    for i in x:
+        print(i)
+        x.append(j)
+        j += 1
+
 if __name__ == "__main__":
-    for_test()
+    for_test2()
