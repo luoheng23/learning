@@ -10,9 +10,9 @@ func TestScanner(t *testing.T) {
 	s := Init("test_for_scanner.go")
 	for {
 		lit, tok := s.Scan()
-		if tok == -1 {
+		if tok == EOF {
 			break
 		}
-		fmt.Printf("lit: %s, tok: %d\n", lit, tok)
+		fmt.Printf("lit: %s, tok: %s\n", lit, tokens[tok])
 	}
 }

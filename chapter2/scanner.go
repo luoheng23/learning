@@ -66,8 +66,6 @@ func (s *Scanner) next() {
 		s.number()
 	} else {
 		switch c {
-		case '0':
-			s.tok = EOF
 		case '"':
 			s.string()
 		case '(':
@@ -132,7 +130,7 @@ func (s *Scanner) next() {
 				s.tok = NOT
 			}
 		default:
-			s.tok = 0
+			s.tok = EOF
 			fmt.Errorf("invalid character %#U", c)
 		}
 }
@@ -151,7 +149,7 @@ func (s *Scanner) ident() {
 	for isLetter(c) || isNumber(c) {
 		c = s.getr()
 	}
-	s.Lit, s.tok = string(s.Buffer[s.CurPos:s.Pos]), IDENTIFIER
+	s.Lit, s.tok = string(s.Buffer[s.CurPos:s.Pos-1]), IDENTIFIER
 	s.ungetr()
 }
 
@@ -194,7 +192,7 @@ func isIdentifier(c byte) bool {
 func (s *Scanner) Scan() (lit string, tok Token){
 	s.next()
 	if s.tok == EOF {
-		return "", -1
+		return "", EOF
 	}
 	return s.Lit, s.tok
 }
