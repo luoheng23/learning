@@ -5,8 +5,9 @@ import (
 	"testing"
 )
 
-var s = struct{}
+// var s = struct{}
+var s, t = 0, 1
 
 func TestS(t *testing.T) {
-	fmt.Println(s)
+	fmt.Println(s, t)
 }
