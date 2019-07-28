@@ -13,3 +13,18 @@ let townName = "Knowhere"
 
 // interpolation
 let townDescription = "\(townName) has a population of \(population) and \(numOfStopLigths) stoplights."
+
+var message: String
+//if population < 10000 {
+//    message = "\(population) is a small town!"
+//} else {
+//    message = "\(population) is pretty big!"
+//}
+message = population < 10000 ? "\(population) is a small town!" : "\(population) is pretty big!"
+print(message)
+
+var hasPostOffice = true
+
+if !hasPostOffice {
+    print("where do we buy stamps?")
+}
