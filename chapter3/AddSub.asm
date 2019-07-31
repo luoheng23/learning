@@ -3,11 +3,11 @@
 INCLUDE Irvine32.inc
 
 .code
-addSub PROC
+main PROC
 	mov eax, 10000h
 	add eax, 40000h
 	sub eax, 20000h
 	call DumpRegs
 	exit
-addSub ENDP
-END addSub
+main ENDP
+END main

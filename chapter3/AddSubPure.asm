@@ -7,11 +7,11 @@ ExitProcess PROTO, dwExitCode: DWORD
 DumpRegs PROTO
 
 .code
-addSubPure PROC
+main PROC
 	mov eax, 10000h
 	add eax, 40000h
 	sub eax, 20000h
 	call DumpRegs
 	INVOKE ExitProcess, 0
-addSubPure ENDP
-END addSubPure
+main ENDP
+END main
