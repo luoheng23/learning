@@ -49,3 +49,18 @@ quad1 QWORD 123423423423423h
 tVal1 TBYTE 1000000000h
 
 rVal1 REAL4 -2.1
+
+; 定义未初始化数据优于.data
+.data?
+bigArray DWORD 5000 DUP(?)
+
+; 符号常量
+; = 连接整数表达式
+lists BYTE 10, 20, 30, 40
+size = ($ - lists)
+
+L WORD 1000h, 2000h, 3000h, 4000h
+Llen = ($ - L) / 2
+
+PI EQU <3.1416>
+pressKey EQU <"Press any key to continue...", 0>
