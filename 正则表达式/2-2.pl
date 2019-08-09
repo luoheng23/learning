@@ -3,7 +3,7 @@
 print "Enter a temperature (e.g., 32F, 100C): ";
 chomp(my $input = <STDIN>);
 
-if ($input =~ m/^([-+]?[0-9]+)([CF])$/) {
+if ($input =~ m/^([-+]?[0-9]+(?:\.[0-9]*)?)\s*([CF])$/) {
     my $inputNum = $1;
     my $type = $2;
     my $celsius;
