@@ -85,7 +85,7 @@ const (
 	blackIndex = 1
 )
 
-func gif_func() {
+func gifFunc() {
 	rand.Seed(time.Now().UTC().UnixNano())
 	if len(os.Args) > 1 && os.Args[1] == "Web" {
 		handler := func(w http.ResponseWriter, r *http.Request) {
@@ -130,6 +130,6 @@ func main() {
 	// echo3()
 	// unique()
 	// unique2()
-	// gif_func()
+	// gifFunc()
 	fmt.Println("good")
 }
