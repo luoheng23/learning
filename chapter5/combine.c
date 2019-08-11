@@ -46,7 +46,6 @@ void combine4(vec_ptr v, data_t *dest)
     data_t *data = v->data;
     data_t acc = IDENT;
 
-    *dest = IDENT;
     for (i = 0; i < length; i++)
     {
         acc = acc OP data[i];
