@@ -91,7 +91,7 @@ void combine6(vec_ptr v, data_t *dest)
     *dest = acc0 OP acc1;
 }
 
-void combine5(vec_ptr v, data_t *dest)
+void combine7(vec_ptr v, data_t *dest)
 {
     long i;
     long length = vec_length(v);
