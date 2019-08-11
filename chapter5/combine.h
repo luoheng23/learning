@@ -4,3 +4,4 @@
 #define OP +
 
 void combine1(vec_ptr v, data_t *dest);
+void combine2(vec_ptr v, data_t *dest);
