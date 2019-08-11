@@ -61,7 +61,7 @@ void combine5(vec_ptr v, data_t *dest)
     data_t *data = v->data;
     data_t acc = IDENT;
 
-    for (i = 0; i < length; i++)
+    for (i = 0; i < length; i+=2)
     {
         acc = (acc OP data[i]) OP data[i+1];
     }
@@ -70,4 +70,3 @@ void combine5(vec_ptr v, data_t *dest)
     }
     *dest = acc;
 }
-
