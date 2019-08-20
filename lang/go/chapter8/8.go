@@ -2,25 +2,27 @@ package main
 
 import (
 	"fmt"
-	"time"
 )
 
+
 func main() {
-	go spinner(time.Second)
-}
+	naturals := make(chan int)
+	squares := make(chan int)
 
-func spinner(delay time.Duration) {
-	for {
-		for _, r := range `-\|/` {
-			fmt.Printf("%c", r)
-			time.Sleep(delay)
+	go func() {
+		for x := 0; ; x++ {
+			naturals <- x
 		}
-	}
-}
+	}()
 
-func fib(x int) int {
-	if x < 2 {
-		return x
+	go func() {
+		for {
+			x := <- naturals
+			squares <- x * x
+		}
+	}()
+
+	for {
+		fmt.Println(<-squares)
 	}
-	return fib(x - 1) + fib(x - 2)
 }
