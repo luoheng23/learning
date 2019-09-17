@@ -35,7 +35,12 @@
 #endif
 
 #define EMPTY_STRUCT_DECLARATION
+#define EMPTY_STRUCT_INITIALIZATION 0
+#ifdef __TINYC__
+#undef EMPTY_STRUCT_INITIALIZATION
 #define EMPTY_STRUCT_INITIALIZATION
+#endif
+
 #define OPTION_CAST(x) (x)
 
 #ifdef _WIN32
@@ -57,11 +62,9 @@
 
 // MSVC cannot parse some things properly
 #undef EMPTY_STRUCT_DECLARATION
-#undef EMPTY_STRUCT_INITIALIZATION
 #undef OPTION_CAST
 
 #define EMPTY_STRUCT_DECLARATION int ____dummy_variable
-#define EMPTY_STRUCT_INITIALIZATION 0
 #define OPTION_CAST(x)
 #endif
 
@@ -2025,6 +2028,8 @@ int nr_ptrs= backtrace ( ((voidptr*)( buffer ) ) ,  100 ) ;
  
  #ifdef __linux__
  
+ #ifndef __BIONIC__
+ 
  if ( backtrace_symbols_fd != 0 ) {
  
 byte* buffer  [100 ] ;
@@ -2043,6 +2048,9 @@ int nr_ptrs= backtrace ( ((voidptr*)( buffer ) ) ,  100 ) ;
  printf ( "Some libc implementations like musl simply do not provide it.\n" ) ;
  
  }
+ ;
+ 
+ #endif
  ;
  
  #endif
@@ -3426,3 +3434,1899 @@ array_set(&/*q*/ arr , n , & (byte []) {  '\0' }) ;
 return  (tos((byte *) arr .data ,  n ) ) ;
  
  }
+ array_string os__parse_windows_cmd_line(byte* cmd) {
+ 
+string s= (tos2((byte *) cmd ) ) ;
+ 
+return  string_split( s , tos2((byte*)" ") ) ;
+ 
+ }
+ Option_string os__read_file(string path) {
+ 
+string mode= tos2((byte*)"rb") ;
+ 
+FILE* fp= os__vfopen ( path , mode ) ;
+ 
+ if ( isnil ( fp ) ) {
+ 
+return  v_error ( _STR("failed to open file \"%.*s\"", path.len, path.str) ) ;
+ 
+ }
+ ;
+ 
+ fseek ( fp ,  0 ,  SEEK_END ) ;
+ 
+int fsize= ftell ( fp ) ;
+ 
+ rewind ( fp ) ;
+ 
+byte* str= v_malloc ( fsize + 1 ) ;
+ 
+ fread ((char*) str ,  fsize ,  1 ,  fp ) ;
+ 
+ fclose ( fp ) ;
+ 
+ str [/*ptr*/ fsize ]/*rbyte 1*/  =  0 ;
+ 
+string tmp6 = OPTION_CAST(string)( (tos((byte *) str ,  fsize ) )); return opt_ok(&tmp6, sizeof(string)) ;
+ 
+ }
+ int os__file_size(string path) {
+  
+ struct /*c struct init*/ 
+
+stat s ;
+ 
+ #ifdef _WIN32
+ 
+ _wstat ( string_to_wide( path ) ,  & /*vvar*/  s ) ;
+ 
+ #else
+ 
+ stat ( ((char*)( path .str ) ) ,  & /*vvar*/  s ) ;
+ 
+ #endif
+ ;
+ 
+return  s .st_size ;
+ 
+ }
+ void os__mv(string old, string new) {
+ 
+ #ifdef _WIN32
+ 
+ _wrename ( string_to_wide( old ) ,  string_to_wide( new ) ) ;
+ 
+ #else
+ 
+ rename ( ((char*)( old .str ) ) ,  ((char*)( new .str ) ) ) ;
+ 
+ #endif
+ ;
+ 
+ }
+ FILE* os__vfopen(string path, string mode) {
+ 
+ #ifdef _WIN32
+ 
+return  _wfopen ( string_to_wide( path ) ,  string_to_wide( mode ) ) ;
+ 
+ #else
+ 
+return  fopen ( ((char*)( path .str ) ) ,  ((char*)( mode .str ) ) ) ;
+ 
+ #endif
+ ;
+ 
+ }
+ array_string os__read_lines(string path) {
+ 
+array_string res=new_array_from_c_array(0, 0, sizeof(string), (string[]) {   0 }) ;
+ 
+int buf_len= 1024 ;
+ 
+byte* buf= v_malloc ( buf_len ) ;
+ 
+string mode= tos2((byte*)"rb") ;
+ 
+FILE* fp= os__vfopen ( path , mode ) ;
+ 
+ if ( isnil ( fp ) ) {
+ 
+return  res ;
+ 
+ }
+ ;
+ 
+int buf_index= 0 ;
+ 
+ while ( fgets ((char*) buf + buf_index ,  buf_len - buf_index ,  fp ) != 0 ) {
+ 
+ 
+int len= vstrlen ( buf ) ;
+ 
+ if ( len == buf_len - 1  &&  buf [/*ptr*/ len - 1 ]/*rbyte 1*/ != 10 ) {
+ 
+ buf_len  *=  2 ;
+ 
+ buf  =  realloc ((char*) buf ,  buf_len ) ;
+ 
+ if ( isnil ( buf ) ) {
+ 
+ v_panic ( tos2((byte*)"Could not reallocate the read buffer") ) ;
+ 
+ }
+ ;
+ 
+ buf_index  =  len ;
+ 
+ continue
+ ;
+ 
+ }
+ ;
+ 
+ if ( buf [/*ptr*/ len - 1 ]/*rbyte 1*/ == 10  ||  buf [/*ptr*/ len - 1 ]/*rbyte 1*/ == 13 ) {
+ 
+ buf [/*ptr*/ len - 1 ]/*rbyte 1*/  =  '\0' ;
+ 
+ }
+ ;
+ 
+ if ( len > 1  &&  buf [/*ptr*/ len - 2 ]/*rbyte 1*/ == 13 ) {
+ 
+ buf [/*ptr*/ len - 2 ]/*rbyte 1*/  =  '\0' ;
+ 
+ }
+ ;
+ 
+_PUSH(& res , ( tos_clone ( buf ) ), tmp15, string) ;
+ 
+ buf_index  =  0 ;
+ 
+ }
+ ;
+ 
+ fclose ( fp ) ;
+ 
+return  res ;
+ 
+ }
+ array_ustring os__read_ulines(string path) {
+ 
+array_string lines= os__read_lines ( path ) ;
+ 
+array_ustring ulines=new_array_from_c_array(0, 0, sizeof(ustring), (ustring[]) {   0 }) ;
+ 
+ array_string tmp18 =  lines;
+ for (int tmp19 = 0; tmp19 < tmp18.len; tmp19++) {
+ string myline = ((string *) tmp18 . data)[tmp19];
+ 
+ 
+_PUSH(& ulines , ( string_ustring( myline ) ), tmp20, ustring) ;
+ 
+ }
+ ;
+ 
+return  ulines ;
+ 
+ }
+ Option_os__File os__open(string path) {
+ 
+os__File file= (os__File) { .cfile =  0 } ;
+ 
+ #ifdef _WIN32
+ 
+u16* wpath= string_to_wide( path ) ;
+ 
+string mode= tos2((byte*)"rb") ;
+ 
+ file  =  (os__File) { .cfile =  _wfopen ( wpath ,  string_to_wide( mode ) ) } ;
+ 
+ #else
+ 
+byte* cpath= path .str ;
+ 
+ file  =  (os__File) { .cfile =  fopen ( ((char*)( cpath ) ) ,  "rb" ) } ;
+ 
+ #endif
+ ;
+ 
+ if ( isnil ( file .cfile ) ) {
+ 
+return  v_error ( _STR("failed to open file \"%.*s\"", path.len, path.str) ) ;
+ 
+ }
+ ;
+ 
+os__File tmp25 = OPTION_CAST(os__File)( file); return opt_ok(&tmp25, sizeof(os__File)) ;
+ 
+ }
+ Option_os__File os__create(string path) {
+ 
+os__File file= (os__File) { .cfile =  0 } ;
+ 
+ #ifdef _WIN32
+ 
+u16* wpath= string_to_wide( string_replace( path , tos2((byte*)"/") , tos2((byte*)"\\") ) ) ;
+ 
+string mode= tos2((byte*)"wb") ;
+ 
+ file  =  (os__File) { .cfile =  _wfopen ( wpath ,  string_to_wide( mode ) ) } ;
+ 
+ #else
+ 
+byte* cpath= path .str ;
+ 
+ file  =  (os__File) { .cfile =  fopen ( ((char*)( cpath ) ) ,  "wb" ) } ;
+ 
+ #endif
+ ;
+ 
+ if ( isnil ( file .cfile ) ) {
+ 
+return  v_error ( _STR("failed to create file \"%.*s\"", path.len, path.str) ) ;
+ 
+ }
+ ;
+ 
+os__File tmp30 = OPTION_CAST(os__File)( file); return opt_ok(&tmp30, sizeof(os__File)) ;
+ 
+ }
+ Option_os__File os__open_append(string path) {
+ 
+os__File file= (os__File) { .cfile =  0 } ;
+ 
+ #ifdef _WIN32
+ 
+u16* wpath= string_to_wide( string_replace( path , tos2((byte*)"/") , tos2((byte*)"\\") ) ) ;
+ 
+string mode= tos2((byte*)"ab") ;
+ 
+ file  =  (os__File) { .cfile =  _wfopen ( wpath ,  string_to_wide( mode ) ) } ;
+ 
+ #else
+ 
+byte* cpath= path .str ;
+ 
+ file  =  (os__File) { .cfile =  fopen ( ((char*)( cpath ) ) ,  "ab" ) } ;
+ 
+ #endif
+ ;
+ 
+ if ( isnil ( file .cfile ) ) {
+ 
+return  v_error ( _STR("failed to create(append) file \"%.*s\"", path.len, path.str) ) ;
+ 
+ }
+ ;
+ 
+os__File tmp35 = OPTION_CAST(os__File)( file); return opt_ok(&tmp35, sizeof(os__File)) ;
+ 
+ }
+ void os__File_write(os__File f, string s) {
+ 
+ fputs ((char*) s .str ,  f .cfile ) ;
+ 
+ }
+ void os__File_write_bytes(os__File f, void* data, int size) {
+ 
+ fwrite ( data ,  1 ,  size ,  f .cfile ) ;
+ 
+ }
+ void os__File_write_bytes_at(os__File f, void* data, int size, int pos) {
+ 
+ fseek ( f .cfile ,  pos ,  SEEK_SET ) ;
+ 
+ fwrite ( data ,  1 ,  size ,  f .cfile ) ;
+ 
+ fseek ( f .cfile ,  0 ,  SEEK_END ) ;
+ 
+ }
+ void os__File_writeln(os__File f, string s) {
+ 
+ fputs ((char*) s .str ,  f .cfile ) ;
+ 
+ fputs ( "\n" ,  f .cfile ) ;
+ 
+ }
+ void os__File_flush(os__File f) {
+ 
+ fflush ( f .cfile ) ;
+ 
+ }
+ void os__File_close(os__File f) {
+ 
+ fclose ( f .cfile ) ;
+ 
+ }
+ FILE* os__popen(string path) {
+ 
+ #ifdef _WIN32
+ 
+string mode= tos2((byte*)"rb") ;
+ 
+u16* wpath= string_to_wide( path ) ;
+ 
+return  _wpopen ( wpath ,  string_to_wide( mode ) ) ;
+ 
+ #else
+ 
+byte* cpath= path .str ;
+ 
+return  popen ((char*) cpath ,  "r" ) ;
+ 
+ #endif
+ ;
+ 
+ }
+ int os__pclose(FILE* f) {
+ 
+ #ifdef _WIN32
+ 
+return  _pclose ( f ) ;
+ 
+ #else
+ 
+return  pclose ( f ) / 256 ;
+ 
+ #endif
+ ;
+ 
+ }
+ Option_os__Result os__exec(string cmd) {
+ 
+string pcmd= _STR("%.*s 2>&1", cmd.len, cmd.str) ;
+ 
+FILE* f= os__popen ( pcmd ) ;
+ 
+ if ( isnil ( f ) ) {
+ 
+return  v_error ( _STR("exec(\"%.*s\") failed", cmd.len, cmd.str) ) ;
+ 
+ }
+ ;
+ 
+byte buf  [1000 ] ;
+ 
+string res= tos2((byte*)"") ;
+ 
+ while ( fgets ( ((char*)( buf ) ) ,  1000 ,  f ) != 0 ) {
+ 
+ 
+ res = string_add(res,  tos ( buf , vstrlen ( buf ) ) ) ;
+ 
+ }
+ ;
+ 
+ res  =  string_trim_space( res ) ;
+ 
+int exit_code= os__pclose ( f ) ;
+ 
+os__Result tmp44 = OPTION_CAST(os__Result)( (os__Result) { .output =  res , .exit_code =  exit_code }); return opt_ok(&tmp44, sizeof(os__Result)) ;
+ 
+ }
+ int os__system(string cmd) {
+ 
+int ret= ((int)( 0 ) ) ;
+ 
+ #ifdef _WIN32
+ 
+ ret  =  _wsystem ( string_to_wide( cmd ) ) ;
+ 
+ #else
+ 
+ ret  =  system ((char*) cmd .str ) ;
+ 
+ #endif
+ ;
+ 
+ if ( ret == - 1 ) {
+ 
+ os__print_c_errno ( ) ;
+ 
+ }
+ ;
+ 
+return  ret ;
+ 
+ }
+ string os__getenv(string key) {
+ 
+ #ifdef _WIN32
+ 
+void* s= _wgetenv ( string_to_wide( key ) ) ;
+ 
+ if ( isnil ( s ) ) {
+ 
+return  tos2((byte*)"") ;
+ 
+ }
+ ;
+ 
+return  string_from_wide ( s ) ;
+ 
+ #else
+ 
+byte* s= ((byte*)( getenv ((char*) key .str ) ) ) ;
+ 
+ if ( isnil ( s ) ) {
+ 
+return  tos2((byte*)"") ;
+ 
+ }
+ ;
+ 
+return  (tos2((byte *) s ) ) ;
+ 
+ #endif
+ ;
+ 
+ }
+ int os__setenv(string name, string value, bool overwrite) {
+ 
+ #ifdef _WIN32
+ 
+string format= _STR("%.*s=%.*s", name.len, name.str, value.len, value.str) ;
+ 
+ if ( overwrite ) {
+ 
+return  _putenv ((char*) format .str ) ;
+ 
+ }
+ ;
+ 
+return  - 1 ;
+ 
+ #else
+ 
+return  setenv ((char*) name .str , (char*) value .str ,  overwrite ) ;
+ 
+ #endif
+ ;
+ 
+ }
+ int os__unsetenv(string name) {
+ 
+ #ifdef _WIN32
+ 
+string format= _STR("%.*s=", name.len, name.str) ;
+ 
+return  _putenv ((char*) format .str ) ;
+ 
+ #else
+ 
+return  unsetenv ((char*) name .str ) ;
+ 
+ #endif
+ ;
+ 
+ }
+ bool os__file_exists(string _path) {
+ 
+ #ifdef _WIN32
+ 
+string path= string_replace( _path , tos2((byte*)"/") , tos2((byte*)"\\") ) ;
+ 
+return  _waccess ( string_to_wide( path ) ,  0 ) != - 1 ;
+ 
+ #else
+ 
+return  access ((char*) _path .str ,  0 ) != - 1 ;
+ 
+ #endif
+ ;
+ 
+ }
+ void os__rm(string path) {
+ 
+ #ifdef _WIN32
+ 
+ _wremove ( string_to_wide( path ) ) ;
+ 
+ #else
+ 
+ remove ((char*) path .str ) ;
+ 
+ #endif
+ ;
+ 
+ }
+ void os__rmdir(string path) {
+ 
+ #ifndef _WIN32
+ 
+ rmdir ((char*) path .str ) ;
+ 
+ #else
+ 
+ RemoveDirectory ( string_to_wide( path ) ) ;
+ 
+ #endif
+ ;
+ 
+ }
+ void os__print_c_errno() {
+ 
+ }
+ string os__ext(string path) {
+ 
+int pos= string_last_index( path , tos2((byte*)".") ) ;
+ 
+ if ( pos == - 1 ) {
+ 
+return  tos2((byte*)"") ;
+ 
+ }
+ ;
+ 
+return  string_right( path , pos ) ;
+ 
+ }
+ string os__dir(string path) {
+ 
+ if (string_eq( path , tos2((byte*)".") ) ) {
+ 
+return  os__getwd ( ) ;
+ 
+ }
+ ;
+ 
+int pos= string_last_index( path , os__PathSeparator ) ;
+ 
+ if ( pos == - 1 ) {
+ 
+return  tos2((byte*)".") ;
+ 
+ }
+ ;
+ 
+return  string_left( path , pos ) ;
+ 
+ }
+ string os__path_sans_ext(string path) {
+ 
+int pos= string_last_index( path , tos2((byte*)".") ) ;
+ 
+ if ( pos == - 1 ) {
+ 
+return  path ;
+ 
+ }
+ ;
+ 
+return  string_left( path , pos ) ;
+ 
+ }
+ string os__basedir(string path) {
+ 
+int pos= string_last_index( path , os__PathSeparator ) ;
+ 
+ if ( pos == - 1 ) {
+ 
+return  path ;
+ 
+ }
+ ;
+ 
+return  string_left( path , pos + 1 ) ;
+ 
+ }
+ string os__filename(string path) {
+ 
+return  string_all_after( path , os__PathSeparator ) ;
+ 
+ }
+ string os__get_line() {
+ 
+string str= os__get_raw_line ( ) ;
+ 
+ #ifdef _WIN32
+ 
+return  string_trim_right( str , tos2((byte*)"\r\n") ) ;
+ 
+ #else
+ 
+return  string_trim_right( str , tos2((byte*)"\n") ) ;
+ 
+ #endif
+ ;
+ 
+ }
+ string os__get_raw_line() {
+ 
+ #ifdef _WIN32
+ 
+int maxlinechars= 256 ;
+ 
+u16* buf= ((u16*)( v_malloc ( maxlinechars * 2 ) ) ) ;
+ 
+int res= ((int)( fgetws ( buf ,  maxlinechars ,  stdin ) ) ) ;
+ 
+int len= ((int)( wcslen ( buf ) ) ) ;
+ 
+ if ( 0 != res ) {
+ 
+return  string_from_wide2 ( buf , len ) ;
+ 
+ }
+ ;
+ 
+return  tos2((byte*)"") ;
+ 
+ #else
+ 
+size_t max= ((size_t)( 256 ) ) ;
+ 
+char* buf= ((char*)( v_malloc ( ((int)( max ) ) ) ) ) ;
+ 
+int nr_chars= getline ( & /*vvar*/  buf ,  & /*vvar*/  max ,  stdin ) ;
+ 
+ if ( nr_chars == 0 ) {
+ 
+return  tos2((byte*)"") ;
+ 
+ }
+ ;
+ 
+return  (tos((byte *) ((byteptr)( buf ) ) ,  nr_chars ) ) ;
+ 
+ #endif
+ ;
+ 
+ }
+ array_string os__get_lines() {
+ 
+string line= tos2((byte*)"") ;
+ 
+array_string inputstr=new_array_from_c_array(0, 0, sizeof(string), (string[]) {   0 }) ;
+ 
+ while (1) { 
+ 
+ line  =  os__get_line ( ) ;
+ 
+ if ( ( line .len <= 0 ) ) {
+ 
+ break
+ ;
+ 
+ }
+ ;
+ 
+ line  =  string_trim_space( line ) ;
+ 
+_PUSH(& inputstr , ( line ), tmp65, string) ;
+ 
+ }
+ ;
+ 
+return  inputstr ;
+ 
+ }
+ string os__get_lines_joined() {
+ 
+string line= tos2((byte*)"") ;
+ 
+string inputstr= tos2((byte*)"") ;
+ 
+ while (1) { 
+ 
+ line  =  os__get_line ( ) ;
+ 
+ if ( ( line .len <= 0 ) ) {
+ 
+ break
+ ;
+ 
+ }
+ ;
+ 
+ line  =  string_trim_space( line ) ;
+ 
+ inputstr = string_add(inputstr,  line ) ;
+ 
+ }
+ ;
+ 
+return  inputstr ;
+ 
+ }
+ string os__user_os() {
+ 
+ #ifdef __linux__
+ 
+return  tos2((byte*)"linux") ;
+ 
+ #endif
+ ;
+ 
+ #ifdef __APPLE__
+ 
+return  tos2((byte*)"mac") ;
+ 
+ #endif
+ ;
+ 
+ #ifdef _WIN32
+ 
+return  tos2((byte*)"windows") ;
+ 
+ #endif
+ ;
+ 
+ #ifdef __FreeBSD__
+ 
+return  tos2((byte*)"freebsd") ;
+ 
+ #endif
+ ;
+ 
+ #ifdef __OpenBSD__
+ 
+return  tos2((byte*)"openbsd") ;
+ 
+ #endif
+ ;
+ 
+ #ifdef __NetBSD__
+ 
+return  tos2((byte*)"netbsd") ;
+ 
+ #endif
+ ;
+ 
+ #ifdef __DragonFly__
+ 
+return  tos2((byte*)"dragonfly") ;
+ 
+ #endif
+ ;
+ 
+ #ifdef _MSC_VER
+ 
+return  tos2((byte*)"windows") ;
+ 
+ #endif
+ ;
+ 
+ #ifdef __BIONIC__
+ 
+return  tos2((byte*)"android") ;
+ 
+ #endif
+ ;
+ 
+return  tos2((byte*)"unknown") ;
+ 
+ }
+ string os__home_dir() {
+ 
+string home= os__getenv ( tos2((byte*)"HOME") ) ;
+ 
+ #ifdef _WIN32
+ 
+ home  =  os__getenv ( tos2((byte*)"HOMEDRIVE") ) ;
+ 
+ if ( home .len == 0 ) {
+ 
+ home  =  os__getenv ( tos2((byte*)"SYSTEMDRIVE") ) ;
+ 
+ }
+ ;
+ 
+string homepath= os__getenv ( tos2((byte*)"HOMEPATH") ) ;
+ 
+ if ( homepath .len == 0 ) {
+ 
+ homepath  = string_add( tos2((byte*)"\\Users\\") , os__getenv ( tos2((byte*)"USERNAME") ) ) ;
+ 
+ }
+ ;
+ 
+ home = string_add(home,  homepath ) ;
+ 
+ #endif
+ ;
+ 
+ home = string_add(home,  os__PathSeparator ) ;
+ 
+return  home ;
+ 
+ }
+ void os__write_file(string path, string text) {
+ 
+Option_os__File tmp70 =  os__create ( path ) ;
+ if (!tmp70 .ok) {
+ string err = tmp70 . error;
+ 
+ return ;
+ 
+ }
+ os__File f = *(os__File*) tmp70 . data;
+ ;
+ 
+ os__File_write( f , text ) ;
+ 
+ os__File_close( f ) ;
+ 
+ }
+ void os__clear() {
+ 
+ printf ( "\x1b[2J" ) ;
+ 
+ printf ( "\x1b[H" ) ;
+ 
+ }
+ void os__on_segfault(void* f) {
+ 
+ #ifdef _WIN32
+ 
+ return ;
+ 
+ #endif
+ ;
+ 
+ #ifdef __APPLE__
+  
+ struct /*c struct init*/ 
+
+sigaction sa ;
+ 
+ memset ( & /*vvar*/  sa ,  0 ,  sizeof( sigaction) ) ;
+ 
+ sigemptyset ( & /*vvar*/  sa .sa_mask ) ;
+ 
+ sa .sa_sigaction  =  f ;
+ 
+ sa .sa_flags  =  SA_SIGINFO ;
+ 
+ sigaction ( SIGSEGV ,  & /*vvar*/  sa ,  0 ) ;
+ 
+ #endif
+ ;
+ 
+ }
+ string os__executable() {
+ 
+ #ifdef __linux__
+ 
+byte* result= v_malloc ( os__MAX_PATH ) ;
+ 
+int count= ((int)( readlink ( "/proc/self/exe" , (char*) result ,  os__MAX_PATH ) ) ) ;
+ 
+ if ( count < 0 ) {
+ 
+ v_panic ( tos2((byte*)"error reading /proc/self/exe to get exe path") ) ;
+ 
+ }
+ ;
+ 
+return  (tos((byte *) result ,  count ) ) ;
+ 
+ #endif
+ ;
+ 
+ #ifdef _WIN32
+ 
+int max= 512 ;
+ 
+u16* result= ((u16*)( v_malloc ( max * 2 ) ) ) ;
+ 
+int len= ((int)( GetModuleFileName ( 0 ,  result ,  max ) ) ) ;
+ 
+return  string_from_wide2 ( result , len ) ;
+ 
+ #endif
+ ;
+ 
+ #ifdef __APPLE__
+ 
+byte* result= v_malloc ( os__MAX_PATH ) ;
+ 
+int pid= getpid ( ) ;
+ 
+int ret= proc_pidpath ( pid , (char*) result ,  os__MAX_PATH ) ;
+ 
+ if ( ret <= 0 ) {
+ 
+ println ( tos2((byte*)"os.executable() failed") ) ;
+ 
+return  tos2((byte*)".") ;
+ 
+ }
+ ;
+ 
+return  (tos2((byte *) result ) ) ;
+ 
+ #endif
+ ;
+ 
+ #ifdef __FreeBSD__
+ 
+byte* result= v_malloc ( os__MAX_PATH ) ;
+ 
+array_int mib=new_array_from_c_array(4, 4, sizeof(int), (int[]) {  1 ,  14 ,  12 ,  - 1  }) ;
+ 
+int size= os__MAX_PATH ;
+ 
+ sysctl ( mib .data ,  4 , (char*) result ,  & /*vvar*/  size ,  0 ,  0 ) ;
+ 
+return  (tos2((byte *) result ) ) ;
+ 
+ #endif
+ ;
+ 
+ #ifdef __OpenBSD__
+ 
+return  ( *(string*) array__get( os__args , 0) ) ;
+ 
+ #endif
+ ;
+ 
+ #ifdef __NetBSD__
+ 
+byte* result= v_malloc ( os__MAX_PATH ) ;
+ 
+int count= ((int)( readlink ( "/proc/curproc/exe" , (char*) result ,  os__MAX_PATH ) ) ) ;
+ 
+ if ( count < 0 ) {
+ 
+ v_panic ( tos2((byte*)"error reading /proc/curproc/exe to get exe path") ) ;
+ 
+ }
+ ;
+ 
+return  (tos((byte *) result ,  count ) ) ;
+ 
+ #endif
+ ;
+ 
+ #ifdef __DragonFly__
+ 
+byte* result= v_malloc ( os__MAX_PATH ) ;
+ 
+int count= ((int)( readlink ( "/proc/curproc/file" , (char*) result ,  os__MAX_PATH ) ) ) ;
+ 
+ if ( count < 0 ) {
+ 
+ v_panic ( tos2((byte*)"error reading /proc/curproc/file to get exe path") ) ;
+ 
+ }
+ ;
+ 
+return  (tos((byte *) result ,  count ) ) ;
+ 
+ #endif
+ ;
+ 
+return  tos2((byte*)".") ;
+ 
+ }
+ bool os__is_dir(string path) {
+ 
+ #ifdef _WIN32
+ 
+return  os__dir_exists ( path ) ;
+ 
+ #else
+  
+ struct /*c struct init*/ 
+
+stat statbuf ;
+ 
+byte* cstr= path .str ;
+ 
+ if ( stat ((char*) cstr ,  & /*vvar*/  statbuf ) != 0 ) {
+ 
+return  0 ;
+ 
+ }
+ ;
+ 
+return  ( statbuf .st_mode & os__S_IFMT ) == os__S_IFDIR ;
+ 
+ #endif
+ ;
+ 
+ }
+ void os__chdir(string path) {
+ 
+ #ifdef _WIN32
+ 
+ _wchdir ( string_to_wide( path ) ) ;
+ 
+ #else
+ 
+ chdir ((char*) path .str ) ;
+ 
+ #endif
+ ;
+ 
+ }
+ string os__getwd() {
+ 
+ #ifdef _WIN32
+ 
+int max= 512 ;
+ 
+u16* buf= ((u16*)( v_malloc ( max * 2 ) ) ) ;
+ 
+ if ( _wgetcwd ( buf ,  max ) == 0 ) {
+ 
+return  tos2((byte*)"") ;
+ 
+ }
+ ;
+ 
+return  string_from_wide ( buf ) ;
+ 
+ #else
+ 
+byte* buf= v_malloc ( 512 ) ;
+ 
+ if ( getcwd ((char*) buf ,  512 ) == 0 ) {
+ 
+return  tos2((byte*)"") ;
+ 
+ }
+ ;
+ 
+return  (tos2((byte *) buf ) ) ;
+ 
+ #endif
+ ;
+ 
+ }
+ string os__realpath(string fpath) {
+ 
+byte* fullpath= v_malloc ( os__MAX_PATH ) ;
+ 
+int res= 0 ;
+ 
+ #ifdef _WIN32
+ 
+ res  =  ((int)( _fullpath ((char*) fullpath , (char*) fpath .str ,  os__MAX_PATH ) ) ) ;
+ 
+ #else
+ 
+ res  =  ((int)( realpath ((char*) fpath .str , (char*) fullpath ) ) ) ;
+ 
+ #endif
+ ;
+ 
+ if ( res != 0 ) {
+ 
+return  (tos((byte *) fullpath ,  vstrlen ( fullpath ) ) ) ;
+ 
+ }
+ ;
+ 
+return  fpath ;
+ 
+ }
+ array_string os__walk_ext(string path, string ext) {
+ 
+ if ( ! os__is_dir ( path ) ) {
+ 
+return new_array_from_c_array(0, 0, sizeof(string), (string[]) {   0 }) ;
+ 
+ }
+ ;
+ 
+array_string files= os__ls ( path ) ;
+ 
+array_string res=new_array_from_c_array(0, 0, sizeof(string), (string[]) {   0 }) ;
+ 
+ array_string tmp98 =  files;
+ for (int i = 0; i < tmp98.len; i++) {
+ string file = ((string *) tmp98 . data)[i];
+ 
+ 
+ if ( string_starts_with( file , tos2((byte*)".") ) ) {
+ 
+ continue
+ ;
+ 
+ }
+ ;
+ 
+string p=string_add(string_add( path , os__PathSeparator ) , file ) ;
+ 
+ if ( os__is_dir ( p ) ) {
+ 
+_PUSH_MANY(& res , ( os__walk_ext ( p , ext ) ), tmp100, array_string) ;
+ 
+ }
+  else  if ( string_ends_with( file , ext ) ) {
+ 
+_PUSH(& res , ( p ), tmp101, string) ;
+ 
+ }
+ ;
+ 
+ }
+ ;
+ 
+return  res ;
+ 
+ }
+ void os__signal(int signum, void* handler) {
+ 
+ signal ( signum ,  handler ) ;
+ 
+ }
+ int os__fork() {
+ 
+ #ifndef _WIN32
+ 
+int pid= fork ( ) ;
+ 
+return  pid ;
+ 
+ #endif
+ ;
+ 
+ v_panic ( tos2((byte*)"os.fork not supported in windows") ) ;
+ 
+ }
+ int os__wait() {
+ 
+ #ifndef _WIN32
+ 
+int pid= wait ( 0 ) ;
+ 
+return  pid ;
+ 
+ #endif
+ ;
+ 
+ v_panic ( tos2((byte*)"os.wait not supported in windows") ) ;
+ 
+ }
+ int os__file_last_mod_unix(string path) {
+  
+ struct /*c struct init*/ 
+
+stat attr ;
+ 
+ stat ((char*) path .str ,  & /*vvar*/  attr ) ;
+ 
+return  attr .st_mtime ;
+ 
+ }
+ void os__log(string s) {
+ 
+ }
+ void os__flush_stdout() {
+ 
+ fflush ( stdout ) ;
+ 
+ }
+ void os__print_backtrace() {
+ 
+ }
+ array_string os__init_os_args(int argc, byteptr* argv) {
+ 
+array_string args=new_array_from_c_array(0, 0, sizeof(string), (string[]) {   0 }) ;
+ 
+voidptr* args_list= ((voidptr*)( 0 ) ) ;
+ 
+int args_count= 0 ;
+ 
+ args_list  =  CommandLineToArgvW ( GetCommandLine ( ) ,  & /*vvar*/  args_count ) ;
+ 
+ for (
+int i= 0  ;  i < args_count  ;  i ++ ) { 
+ 
+ 
+_PUSH(& args , ( string_from_wide ( ((u16*)( args_list [/*ptr*/ i ]/*rvoidptr 1*/ ) ) ) ), tmp5, string) ;
+ 
+ }
+ ;
+ 
+ LocalFree ( args_list ) ;
+ 
+return  args ;
+ 
+ }
+ array_string os__ls(string path) {
+ 
+os__win32finddata find_file_data= (os__win32finddata) { .dwFileAttributes =  0 , .nFileSizeHigh =  0 , .nFileSizeLow =  0 , .dwReserved0 =  0 , .dwReserved1 =  0 , .dwFileType =  0 , .dwCreatorType =  0 , .wFinderFlags =  0 } ;
+ 
+array_string dir_files=new_array_from_c_array(0, 0, sizeof(string), (string[]) {   0 }) ;
+ 
+ if ( ! os__dir_exists ( path ) ) {
+ 
+ println ( _STR("ls() couldnt open dir \"%.*s\" (does not exist).", path.len, path.str) ) ;
+ 
+return  dir_files ;
+ 
+ }
+ ;
+ 
+string path_files= _STR("%.*s\\*", path.len, path.str) ;
+ 
+void* h_find_files= FindFirstFile ( string_to_wide( path_files ) ,  & /*vvar*/  find_file_data ) ;
+ 
+string first_filename= string_from_wide ( ((u16*)( find_file_data .cFileName ) ) ) ;
+ 
+ if (string_ne( first_filename , tos2((byte*)".") )  && string_ne( first_filename , tos2((byte*)"..") ) ) {
+ 
+_PUSH(& dir_files , ( first_filename ), tmp11, string) ;
+ 
+ }
+ ;
+ 
+ while ( FindNextFile ( h_find_files ,  & /*vvar*/  find_file_data ) ) {
+ 
+ 
+string filename= string_from_wide ( ((u16*)( find_file_data .cFileName ) ) ) ;
+ 
+ if (string_ne( filename , tos2((byte*)".") )  && string_ne( filename , tos2((byte*)"..") ) ) {
+ 
+_PUSH(& dir_files , ( string_clone( filename ) ), tmp13, string) ;
+ 
+ }
+ ;
+ 
+ }
+ ;
+ 
+ FindClose ( h_find_files ) ;
+ 
+return  dir_files ;
+ 
+ }
+ bool os__dir_exists(string path) {
+ 
+string _path= string_replace( path , tos2((byte*)"/") , tos2((byte*)"\\") ) ;
+ 
+int attr= ((int)( GetFileAttributes ( string_to_wide( _path ) ) ) ) ;
+ 
+ if ( attr == INVALID_FILE_ATTRIBUTES ) {
+ 
+return  0 ;
+ 
+ }
+ ;
+ 
+ if ( ( attr & FILE_ATTRIBUTE_DIRECTORY ) != 0 ) {
+ 
+return  1 ;
+ 
+ }
+ ;
+ 
+return  0 ;
+ 
+ }
+ void os__mkdir(string path) {
+ 
+string _path= string_replace( path , tos2((byte*)"/") , tos2((byte*)"\\") ) ;
+ 
+ if ( string_last_index( _path , tos2((byte*)"\\") ) != - 1 ) {
+ 
+ os__mkdir ( string_all_before_last( _path , tos2((byte*)"\\") ) ) ;
+ 
+ }
+ ;
+ 
+ CreateDirectory ( string_to_wide( _path ) ,  0 ) ;
+ 
+ }
+ HANDLE os__get_file_handle(string path) {
+ 
+string mode= tos2((byte*)"rb") ;
+ 
+void* _fd= _wfopen ( string_to_wide( path ) ,  string_to_wide( mode ) ) ;
+ 
+ if ( _fd == 0 ) {
+ 
+return  ((HANDLE)( os__INVALID_HANDLE_VALUE ) ) ;
+ 
+ }
+ ;
+ 
+void* _handle= _get_osfhandle ( _fileno ( _fd ) ) ;
+ 
+return  _handle ;
+ 
+ }
+ Option_string os__get_module_filename(HANDLE handle) {
+ 
+int sz= ((int)( 4096 ) ) ;
+ 
+u16* buf= ((u16*)( v_malloc ( 4096 ) ) ) ;
+ 
+ while (1) { 
+ 
+void* status= GetModuleFileName ( handle ,  & /*vvar*/  buf ,  sz ) ;
+ 
+ if (  status ==  os__SUCCESS ) { /* case */
+ 
+string _filename= string_from_wide2 ( buf , sz ) ;
+ 
+string tmp24 = OPTION_CAST(string)( _filename); return opt_ok(&tmp24, sizeof(string)) ;
+ 
+ }
+ else  { // default:
+ 
+return  v_error ( tos2((byte*)"Cannot get file name from handle.") ) ;
+ 
+ }
+ ;
+ 
+ }
+ ;
+ 
+ v_panic ( tos2((byte*)"this should be unreachable") ) ;
+ 
+ }
+ void* os__ptr_win_get_error_msg(u32 code) {
+ 
+voidptr buf= ((voidptr)( 0 ) ) ;
+ 
+ if ( code > ((u32)( os__MAX_ERROR_CODE ) ) ) {
+ 
+return  buf ;
+ 
+ }
+ ;
+ 
+ FormatMessage ( os__FORMAT_MESSAGE_ALLOCATE_BUFFER | os__FORMAT_MESSAGE_FROM_SYSTEM | os__FORMAT_MESSAGE_IGNORE_INSERTS ,  0 ,  code ,  MAKELANGID ( os__LANG_NEUTRAL ,  os__SUBLANG_DEFAULT ) ,  & /*vvar*/  buf ,  0 ,  0 ) ;
+ 
+return  buf ;
+ 
+ }
+ string os__get_error_msg(int code) {
+ 
+ if ( code < 0 ) {
+ 
+return  tos2((byte*)"") ;
+ 
+ }
+ ;
+ 
+void* _ptr_text= os__ptr_win_get_error_msg ( ((u32)( code ) ) ) ;
+ 
+ if ( _ptr_text == 0 ) {
+ 
+return  tos2((byte*)"") ;
+ 
+ }
+ ;
+ 
+return  tos ( _ptr_text , vstrlen ( _ptr_text ) ) ;
+ 
+ }
+ string term___format(string msg, string open, string close) {
+ 
+return string_add(string_add(string_add(string_add(string_add(string_add( tos2((byte*)"\x1b[") , open ) , tos2((byte*)"m") ) , msg ) , tos2((byte*)"\x1b[") ) , close ) , tos2((byte*)"m") ) ;
+ 
+ }
+ string term___format_rgb(int r, int g, int b, string msg, string open, string close) {
+ 
+return string_add(string_add(string_add(string_add(string_add(string_add(string_add(string_add(string_add(string_add(string_add(string_add( tos2((byte*)"\x1b[") , open ) , tos2((byte*)";2;") ) , int_str( r ) ) , tos2((byte*)";") ) , int_str( g ) ) , tos2((byte*)";") ) , int_str( b ) ) , tos2((byte*)"m") ) , msg ) , tos2((byte*)"\x1b[") ) , close ) , tos2((byte*)"m") ) ;
+ 
+ }
+ string term__rgb(int r, int g, int b, string msg) {
+ 
+return  term__format_rgb ( r , g , b , msg , tos2((byte*)"38") , tos2((byte*)"39") ) ;
+ 
+ }
+ string term__bg_rgb(int r, int g, int b, string msg) {
+ 
+return  term__format_rgb ( r , g , b , msg , tos2((byte*)"48") , tos2((byte*)"49") ) ;
+ 
+ }
+ string term__hex(int hex, string msg) {
+ 
+return  term__format_rgb ( hex  >>  16 , hex  >>  8 & 0xFF , hex & 0xFF , msg , tos2((byte*)"38") , tos2((byte*)"39") ) ;
+ 
+ }
+ string term__bg_hex(int hex, string msg) {
+ 
+return  term__format_rgb ( hex  >>  16 , hex  >>  8 & 0xFF , hex & 0xFF , msg , tos2((byte*)"48") , tos2((byte*)"49") ) ;
+ 
+ }
+ string term__bg_black(string msg) {
+ 
+return  term__format ( msg , tos2((byte*)"40") , tos2((byte*)"49") ) ;
+ 
+ }
+ string term__bright_bg_black(string msg) {
+ 
+return  term__format ( msg , tos2((byte*)"100") , tos2((byte*)"49") ) ;
+ 
+ }
+ string term__bg_blue(string msg) {
+ 
+return  term__format ( msg , tos2((byte*)"44") , tos2((byte*)"49") ) ;
+ 
+ }
+ string term__bright_bg_blue(string msg) {
+ 
+return  term__format ( msg , tos2((byte*)"104") , tos2((byte*)"49") ) ;
+ 
+ }
+ string term__bg_cyan(string msg) {
+ 
+return  term__format ( msg , tos2((byte*)"46") , tos2((byte*)"49") ) ;
+ 
+ }
+ string term__bright_bg_cyan(string msg) {
+ 
+return  term__format ( msg , tos2((byte*)"106") , tos2((byte*)"49") ) ;
+ 
+ }
+ string term__bg_green(string msg) {
+ 
+return  term__format ( msg , tos2((byte*)"42") , tos2((byte*)"49") ) ;
+ 
+ }
+ string term__bright_bg_green(string msg) {
+ 
+return  term__format ( msg , tos2((byte*)"102") , tos2((byte*)"49") ) ;
+ 
+ }
+ string term__bg_magenta(string msg) {
+ 
+return  term__format ( msg , tos2((byte*)"45") , tos2((byte*)"49") ) ;
+ 
+ }
+ string term__bright_bg_magenta(string msg) {
+ 
+return  term__format ( msg , tos2((byte*)"105") , tos2((byte*)"49") ) ;
+ 
+ }
+ string term__bg_red(string msg) {
+ 
+return  term__format ( msg , tos2((byte*)"41") , tos2((byte*)"49") ) ;
+ 
+ }
+ string term__bright_bg_red(string msg) {
+ 
+return  term__format ( msg , tos2((byte*)"101") , tos2((byte*)"49") ) ;
+ 
+ }
+ string term__bg_white(string msg) {
+ 
+return  term__format ( msg , tos2((byte*)"47") , tos2((byte*)"49") ) ;
+ 
+ }
+ string term__bright_bg_white(string msg) {
+ 
+return  term__format ( msg , tos2((byte*)"107") , tos2((byte*)"49") ) ;
+ 
+ }
+ string term__bg_yellow(string msg) {
+ 
+return  term__format ( msg , tos2((byte*)"43") , tos2((byte*)"49") ) ;
+ 
+ }
+ string term__bright_bg_yellow(string msg) {
+ 
+return  term__format ( msg , tos2((byte*)"103") , tos2((byte*)"49") ) ;
+ 
+ }
+ string term__black(string msg) {
+ 
+return  term__format ( msg , tos2((byte*)"30") , tos2((byte*)"39") ) ;
+ 
+ }
+ string term__bright_black(string msg) {
+ 
+return  term__format ( msg , tos2((byte*)"90") , tos2((byte*)"39") ) ;
+ 
+ }
+ string term__blue(string msg) {
+ 
+return  term__format ( msg , tos2((byte*)"34") , tos2((byte*)"39") ) ;
+ 
+ }
+ string term__bright_blue(string msg) {
+ 
+return  term__format ( msg , tos2((byte*)"94") , tos2((byte*)"39") ) ;
+ 
+ }
+ string term__bold(string msg) {
+ 
+return  term__format ( msg , tos2((byte*)"1") , tos2((byte*)"22") ) ;
+ 
+ }
+ string term__cyan(string msg) {
+ 
+return  term__format ( msg , tos2((byte*)"36") , tos2((byte*)"39") ) ;
+ 
+ }
+ string term__bright_cyan(string msg) {
+ 
+return  term__format ( msg , tos2((byte*)"96") , tos2((byte*)"39") ) ;
+ 
+ }
+ string term__dim(string msg) {
+ 
+return  term__format ( msg , tos2((byte*)"2") , tos2((byte*)"22") ) ;
+ 
+ }
+ string term__green(string msg) {
+ 
+return  term__format ( msg , tos2((byte*)"32") , tos2((byte*)"39") ) ;
+ 
+ }
+ string term__bright_green(string msg) {
+ 
+return  term__format ( msg , tos2((byte*)"92") , tos2((byte*)"39") ) ;
+ 
+ }
+ string term__gray(string msg) {
+ 
+return  term__bright_black ( msg ) ;
+ 
+ }
+ string term__hidden(string msg) {
+ 
+return  term__format ( msg , tos2((byte*)"8") , tos2((byte*)"28") ) ;
+ 
+ }
+ string term__italic(string msg) {
+ 
+return  term__format ( msg , tos2((byte*)"3") , tos2((byte*)"23") ) ;
+ 
+ }
+ string term__inverse(string msg) {
+ 
+return  term__format ( msg , tos2((byte*)"7") , tos2((byte*)"27") ) ;
+ 
+ }
+ string term__magenta(string msg) {
+ 
+return  term__format ( msg , tos2((byte*)"35") , tos2((byte*)"39") ) ;
+ 
+ }
+ string term__bright_magenta(string msg) {
+ 
+return  term__format ( msg , tos2((byte*)"95") , tos2((byte*)"39") ) ;
+ 
+ }
+ string term__reset(string msg) {
+ 
+return  term__format ( msg , tos2((byte*)"0") , tos2((byte*)"0") ) ;
+ 
+ }
+ string term__red(string msg) {
+ 
+return  term__format ( msg , tos2((byte*)"31") , tos2((byte*)"39") ) ;
+ 
+ }
+ string term__bright_red(string msg) {
+ 
+return  term__format ( msg , tos2((byte*)"91") , tos2((byte*)"39") ) ;
+ 
+ }
+ string term__strikethrough(string msg) {
+ 
+return  term__format ( msg , tos2((byte*)"9") , tos2((byte*)"29") ) ;
+ 
+ }
+ string term__underline(string msg) {
+ 
+return  term__format ( msg , tos2((byte*)"4") , tos2((byte*)"24") ) ;
+ 
+ }
+ string term__white(string msg) {
+ 
+return  term__format ( msg , tos2((byte*)"37") , tos2((byte*)"39") ) ;
+ 
+ }
+ string term__bright_white(string msg) {
+ 
+return  term__format ( msg , tos2((byte*)"97") , tos2((byte*)"39") ) ;
+ 
+ }
+ string term__yellow(string msg) {
+ 
+return  term__format ( msg , tos2((byte*)"33") , tos2((byte*)"39") ) ;
+ 
+ }
+ string term__bright_yellow(string msg) {
+ 
+return  term__format ( msg , tos2((byte*)"93") , tos2((byte*)"39") ) ;
+ 
+ }
+ string term__format(string msg, string open, string close) {
+ 
+return  term___format ( msg , open , close ) ;
+ 
+ }
+ string term__format_rgb(int r, int g, int b, string msg, string open, string close) {
+ 
+return  term___format_rgb ( r , g , b , msg , open , close ) ;
+ 
+ }
+ void term__set_cursor_position(int x, int y) {
+ 
+ print (string_add( _STR("\x1b[%d;%d", y, x) , tos2((byte*)"H") ) ) ;
+ 
+ }
+ void term__move(int n, string direction) {
+ 
+ print ( _STR("\x1b[%d%.*s", n, direction.len, direction.str) ) ;
+ 
+ }
+ void term__cursor_up(int n) {
+ 
+ term__move ( n , tos2((byte*)"A") ) ;
+ 
+ }
+ void term__cursor_down(int n) {
+ 
+ term__move ( n , tos2((byte*)"B") ) ;
+ 
+ }
+ void term__cursor_forward(int n) {
+ 
+ term__move ( n , tos2((byte*)"C") ) ;
+ 
+ }
+ void term__cursor_back(int n) {
+ 
+ term__move ( n , tos2((byte*)"D") ) ;
+ 
+ }
+ void term__erase_display(string t) {
+ 
+ print (string_add(string_add( tos2((byte*)"\x1b[") , t ) , tos2((byte*)"J") ) ) ;
+ 
+ }
+ void term__erase_toend() {
+ 
+ term__erase_display ( tos2((byte*)"0") ) ;
+ 
+ }
+ void term__erase_tobeg() {
+ 
+ term__erase_display ( tos2((byte*)"1") ) ;
+ 
+ }
+ void term__erase_clear() {
+ 
+ term__erase_display ( tos2((byte*)"2") ) ;
+ 
+ }
+ void term__erase_del_clear() {
+ 
+ term__erase_display ( tos2((byte*)"3") ) ;
+ 
+ }
+ void term__erase_line(string t) {
+ 
+ print (string_add(string_add( tos2((byte*)"\x1b[") , t ) , tos2((byte*)"K") ) ) ;
+ 
+ }
+ void term__erase_line_toend() {
+ 
+ term__erase_line ( tos2((byte*)"0") ) ;
+ 
+ }
+ void term__erase_line_tobeg() {
+ 
+ term__erase_line ( tos2((byte*)"1") ) ;
+ 
+ }
+ void term__erase_line_clear() {
+ 
+ term__erase_line ( tos2((byte*)"2") ) ;
+ 
+ }
+ void term__show_cursor() {
+ 
+ print ( tos2((byte*)"\x1b[?25h") ) ;
+ 
+ }
+ void term__hide_cursor() {
+ 
+ print ( tos2((byte*)"\x1b[?25l") ) ;
+ 
+ }
+ bool Repl_checks(Repl* r, string line) {
+ 
+bool in_string= 0 ;
+ 
+bool was_indent= r ->indent > 0 ;
+ 
+ for (
+int i= 0  ;  i < line .len  ;  i ++ ) { 
+ 
+ 
+ if ( string_at( line , i) == '\''  &&  ( i == 0  ||  string_at( line , i - 1) != '\\' ) ) {
+ 
+ in_string  =  ! in_string ;
+ 
+ }
+ ;
+ 
+ if ( string_at( line , i) == '{'  &&  ! in_string ) {
+ 
+ r ->indent ++ ;
+ 
+ }
+ ;
+ 
+ if ( string_at( line , i) == '}'  &&  ! in_string ) {
+ 
+ r ->indent -- ;
+ 
+ if ( r ->indent == 0 ) {
+ 
+ r ->in_func  =  0 ;
+ 
+ }
+ ;
+ 
+ }
+ ;
+ 
+ if ( i + 2 < line .len  &&  r ->indent == 0  &&  string_at( line , i + 1) == 'f'  &&  string_at( line , i + 2) == 'n' ) {
+ 
+ r ->in_func  =  1 ;
+ 
+ }
+ ;
+ 
+ }
+ ;
+ 
+return  r ->in_func  ||  ( was_indent  &&  r ->indent <= 0 )  ||  r ->indent > 0 ;
+ 
+ }
+ bool Repl_function_call(Repl* r, string line) {
+ 
+ array_string tmp16 =  r ->functions_name;
+ for (int tmp17 = 0; tmp17 < tmp16.len; tmp17++) {
+ string function = ((string *) tmp16 . data)[tmp17];
+ 
+ 
+ if ( string_starts_with( line , function ) ) {
+ 
+return  1 ;
+ 
+ }
+ ;
+ 
+ }
+ ;
+ 
+return  0 ;
+ 
+ }
+ void repl_help() {
+ 
+ println ( tos2((byte*)"\nV\n  help                   Displays this information.\n  Ctrl-C, Ctrl-D, exit   Exits the REPL.\n  clear                  Clears the screen.\n") ) ;
+ 
+ }
+ array_string run_repl() {
+ 
+ println ( tos2((byte*)"V") ) ;
+ 
+ println ( tos2((byte*)"Use Ctrl-C or `exit` to exit") ) ;
+ 
+string file= tos2((byte*)".vrepl.v") ;
+ 
+string temp_file= tos2((byte*)".vrepl_temp.v") ;
+ 
+ 
+Repl r= (Repl) { .indent =  0 , .in_func =  0 , .lines =  new_array(0, 1, sizeof( string )) , .temp_lines =  new_array(0, 1, sizeof( string )) , .functions_name =  new_array(0, 1, sizeof( string )) , .functions =  new_array(0, 1, sizeof( string )) } ;
+ 
+string vexe= ( *(string*) array__get( os__args , 0) ) ;
+ 
+ while (1) { 
+ 
+ if ( r .indent == 0 ) {
+ 
+ print ( tos2((byte*)">>> ") ) ;
+ 
+ }
+  else { 
+ 
+ print ( tos2((byte*)"... ") ) ;
+ 
+ }
+ ;
+ 
+string line= os__get_raw_line ( ) ;
+ 
+ if (string_eq( string_trim_space( line ) , tos2((byte*)"") )  &&  string_ends_with( line , tos2((byte*)"\n") ) ) {
+ 
+ continue
+ ;
+ 
+ }
+ ;
+ 
+ line  =  string_trim_space( line ) ;
+ 
+ if ( line .len == - 1  || string_eq( line , tos2((byte*)"") )  || string_eq( line , tos2((byte*)"exit") ) ) {
+ 
+ break
+ ;
+ 
+ }
+ ;
+ 
+ if (string_eq( line , tos2((byte*)"\n") ) ) {
+ 
+ continue
+ ;
+ 
+ }
+ ;
+ 
+ if (string_eq( line , tos2((byte*)"clear") ) ) {
+ 
+ term__erase_display ( tos2((byte*)"2") ) ;
+ 
+ continue
+ ;
+ 
+ }
+ ;
+ 
+ if (string_eq( line , tos2((byte*)"help") ) ) {
+ 
+ repl_help ( ) ;
+ 
+ continue
+ ;
+ 
+ }
+ ;
+ 
+ if ( string_starts_with( line , tos2((byte*)"fn") ) ) {
+ 
+ r .in_func  =  1 ;
+ 
+_PUSH(& r .functions_name , ( string_trim_space( string_all_before( string_all_after( line , tos2((byte*)"fn") ) , tos2((byte*)"(") ) ) ), tmp25, string) ;
+ 
+ }
+ ;
+ 
+bool was_func= r .in_func ;
+ 
+ if ( Repl_checks(& /* ? */ r , line ) ) {
+ 
+ if ( r .in_func  ||  was_func ) {
+ 
+_PUSH(& r .functions , ( line ), tmp27, string) ;
+ 
+ }
+  else { 
+ 
+_PUSH(& r .temp_lines , ( line ), tmp28, string) ;
+ 
+ }
+ ;
+ 
+ if ( r .indent > 0 ) {
+ 
+ continue
+ ;
+ 
+ }
+ ;
+ 
+ line  =  tos2((byte*)"") ;
+ 
+ }
+ ;
+ 
+ if ( string_starts_with( line , tos2((byte*)"print") ) ) {
+ 
+string source_code=string_add(string_add(string_add( array_string_join( r .functions , tos2((byte*)"\n") ) , array_string_join( r .lines , tos2((byte*)"\n") ) ) , tos2((byte*)"\n") ) , line ) ;
+ 
+ os__write_file ( file , source_code ) ;
+ 
+Option_os__Result tmp30 =  os__exec ( _STR("%.*s run %.*s -repl", vexe.len, vexe.str, file.len, file.str) ) ;
+ if (!tmp30 .ok) {
+ string err = tmp30 . error;
+ 
