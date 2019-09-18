@@ -10,15 +10,15 @@ type chicken int
 type bird int
 
 func (d dog) shout() {
-	print("wang wang...\n")
+	println("wang wang...")
 }
 
 func (c chicken) shout() {
-	print("luo luo...\n")
+	println("luo luo...")
 }
 
 func (b bird) shout() {
-	print("jo jo...\n")
+	println("jo jo...")
 }
 
 // Context contains all strategies
