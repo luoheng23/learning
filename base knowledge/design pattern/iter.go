@@ -8,18 +8,18 @@ type iterator interface {
 }
 
 type bowl struct {
-	cur int
+	cur   int
 	array []int
 }
 
 var bow bowl
 
-func init()  {
+func init() {
 	bow.cur = 0
 	bow.array = []int{1, 2, 3}
 }
 
-var errEnd = errors.New("The iterator has reached the end.")
+var errEnd = errors.New("the iterator has reached the end")
 
 func (b *bowl) NewIterator() {
 	b.cur = 0
@@ -29,7 +29,7 @@ func (b *bowl) hasNext() bool {
 	return b.cur < len(b.array)
 }
 
-func (b *bowl) next() (int, error){
+func (b *bowl) next() (int, error) {
 	if b.hasNext() {
 		b.cur++
 		return b.array[b.cur-1], nil

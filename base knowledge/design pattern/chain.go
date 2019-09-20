@@ -1,7 +1,7 @@
 package design
 
-type Handler interface {
-	setNext(Handler)
+type handler interface {
+	setNext(handler)
 	response(*people)
 	handleMessage(*people)
 }
@@ -11,7 +11,7 @@ type people struct {
 	req string
 }
 
-func NewPeople(typ int, req string) *people {
+func newPeople(typ int, req string) *people {
 	return &people{
 		typ: typ,
 		req: req,
@@ -28,16 +28,16 @@ func (p *people) getRequest() string {
 
 type worker struct {
 	level int
-	next  Handler
+	next  handler
 }
 
-func NewWorker(level int) *worker {
+func newWorker(level int) *worker {
 	return &worker{
 		level: level,
 		next:  nil,
 	}
 }
-func (w *worker) setNext(h Handler) {
+func (w *worker) setNext(h handler) {
 	w.next = h
 }
 
@@ -60,11 +60,11 @@ func (w *worker) handleMessage(p *people) {
 }
 
 func chain() {
-	w1, w2, w3 := NewWorker(1), NewWorker(2), NewWorker(3)
+	w1, w2, w3 := newWorker(1), newWorker(2), newWorker(3)
 	w1.setNext(w2)
 	w2.setNext(w3)
-	p1, p2, p3 := NewPeople(1, "I want to eat apple"), NewPeople(2, "I want to eat peach"), NewPeople(3, "I want to eat banana")
-	p4 := NewPeople(4, "Nobody likes me")
+	p1, p2, p3 := newPeople(1, "I want to eat apple"), newPeople(2, "I want to eat peach"), newPeople(3, "I want to eat banana")
+	p4 := newPeople(4, "Nobody likes me")
 	w1.handleMessage(p1)
 	w1.handleMessage(p2)
 	w1.handleMessage(p3)
