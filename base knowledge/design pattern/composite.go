@@ -1,3 +1,4 @@
+package design
 
 type point struct {
 	x int
