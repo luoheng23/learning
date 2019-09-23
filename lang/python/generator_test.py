@@ -46,9 +46,19 @@ def generator_test5():
     L = list(x)
     print("L, x", L)
 
+def generator_test6():
+    x = 10
+    g = (x for i in range(10))
+    print(next(g))
+    x = 20
+    print(next(g))
+    x = 30
+    print(next(g))
 
 if __name__ == "__main__":
     generator_test1()
     generator_test2()
     generator_test3()
     generator_test4()
+    generator_test5()
+    generator_test6()
