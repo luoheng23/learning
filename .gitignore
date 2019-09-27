@@ -612,3 +612,4 @@ venv.bak/
 
 # mypy
 .mypy_cache/
+tool/docker/go.tar
