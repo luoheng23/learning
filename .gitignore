@@ -5,6 +5,7 @@
 #
 *.zip
 *.tar
+tools/
 # User-specific files
 *.rsuser
 *.suo
