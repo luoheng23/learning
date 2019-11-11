@@ -8,7 +8,16 @@ fn main() {
     } else {
         println!("what's wrong");
     }
-
+    let number = if true {
+        if false {
+            3
+        } else {
+            5
+        }
+    } else {
+        5
+    };
+    println!("h{}!", number);
     loop {
         println!("Hello");
         break
