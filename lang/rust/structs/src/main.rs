@@ -9,6 +9,17 @@ impl Rectangle {
     fn area(&self) -> u32 {
         return self.width * self.height;
     }
+
+    fn can_hold(&self, rect: &Rectangle) -> bool {
+        self.width >= rect.width && self.height >= rect.height
+    }
+
+    fn new(width: u32, height: u32) -> Rectangle {
+        Rectangle {
+            width,
+            height,
+        }
+    }
 }
 
 // struct Color(i32, i32, i32);
@@ -23,7 +34,12 @@ impl Rectangle {
 
 fn main() {
     let rect1 = Rectangle { width: 30, height: 50};
-    let _rect2 = Rectangle { ..rect1 };
+    let rect2 = Rectangle { width: 10, height: 40};
+    let rect3 = Rectangle { width: 60, height: 45};
+    let rect4 = Rectangle::new(20, 30);
+    println!("Can rect1 hold rect2? {}", rect1.can_hold(&rect2));
+    println!("Can rect1 hold rect3? {}", rect1.can_hold(&rect3));
+    println!("Can rect1 hold rect4? {}", rect1.can_hold(&rect4));
     // let user1 = User {
     //     email: "1301089462@qq.com",
     //     username: "luoheng",
